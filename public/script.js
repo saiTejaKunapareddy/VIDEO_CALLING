@@ -152,18 +152,17 @@ socket.on("user-list", (users) => {
 });
 
 function callUser(id) {
-  peer.on("call", (call) => {
-    call.answer(myVideoStream);
-    call.on("stream", (userVideoStream) => {
-      addVideoStream(myVideo, userVideoStream);
-    });
-  });
-
-  peer.on("connection", (conn) => {
-    conn.on("data", (data) => {
-      if (data.type === "call") {
-        callUser(data.from);
-      }
-    });
+  const call = peer.call(id, myVideoStream);
+  call.on("stream", (userVideoStream) => {
+    const video = document.createElement("video");
+    addVideoStream(video, userVideoStream);
   });
 }
+
+peer.on("call", (call) => {
+  call.answer(myVideoStream);
+  call.on("stream", (userVideoStream) => {
+    const video = document.createElement("video");
+    addVideoStream(video, userVideoStream);
+  });
+});
