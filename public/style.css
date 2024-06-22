@@ -171,30 +171,6 @@ video {
   color: #fff;
 }
 
-.user-list {
-  padding: 1rem;
-  background-color: var(--main-darklg);
-}
-
-.user-list h3 {
-  color: var(--main-light);
-}
-
-.user-list ul {
-  list-style: none;
-  padding: 0;
-}
-
-.user-list li {
-  padding: 0.5rem;
-  background-color: var(--primary-color);
-  color: var(--main-light);
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-  border-radius: 5px;
-  text-align: center;
-}
-
 @media (max-width: 700px) {
   .main__right {
     display: none;

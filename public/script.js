@@ -3,7 +3,6 @@ const videoGrid = document.getElementById("video-grid");
 const myVideo = document.createElement("video");
 const showChat = document.querySelector("#showChat");
 const backBtn = document.querySelector(".header__back");
-const userList = document.getElementById("users");
 myVideo.muted = true;
 
 backBtn.addEventListener("click", () => {
@@ -39,15 +38,12 @@ navigator.mediaDevices
     addVideoStream(myVideo, stream);
 
     peer.on("call", (call) => {
-      // Show call notification
-      const acceptCall = confirm(`You are receiving a call from ${call.peer}. Do you want to accept?`);
-      if (acceptCall) {
-        call.answer(stream);
-        const video = document.createElement("video");
-        call.on("stream", (userVideoStream) => {
-          addVideoStream(video, userVideoStream);
-        });
-      }
+      console.log('someone call me');
+      call.answer(stream);
+      const video = document.createElement("video");
+      call.on("stream", (userVideoStream) => {
+        addVideoStream(video, userVideoStream);
+      });
     });
 
     socket.on("user-connected", (userId) => {
@@ -56,6 +52,7 @@ navigator.mediaDevices
   });
 
 const connectToNewUser = (userId, stream) => {
+  console.log('I call someone' + userId);
   const call = peer.call(userId, stream);
   const video = document.createElement("video");
   call.on("stream", (userVideoStream) => {
@@ -64,14 +61,11 @@ const connectToNewUser = (userId, stream) => {
 };
 
 peer.on("open", (id) => {
+  console.log('my id is' + id);
   socket.emit("join-room", ROOM_ID, id, user);
 });
 
 const addVideoStream = (video, stream) => {
-  // Remove existing video elements if already two are present
-  if (videoGrid.children.length >= 2) {
-    videoGrid.removeChild(videoGrid.firstChild);
-  }
   video.srcObject = stream;
   video.addEventListener("loadedmetadata", () => {
     video.play();
@@ -138,53 +132,11 @@ inviteButton.addEventListener("click", (e) => {
 });
 
 socket.on("createMessage", (message, userName) => {
-  messages.innerHTML +=
+  messages.innerHTML =
+    messages.innerHTML +
     `<div class="message">
         <b><i class="far fa-user-circle"></i> <span> ${userName === user ? "me" : userName
     }</span> </b>
         <span>${message}</span>
     </div>`;
-});
-
-socket.on("user-list", (users) => {
-  userList.innerHTML = "";
-  users.forEach((user) => {
-    const li = document.createElement("li");
-    li.innerText = user.userName;
-    li.dataset.id = user.userId;
-    li.addEventListener("click", () => {
-      callUser(user.userId, user.userName);
-    });
-    userList.appendChild(li);
-  });
-});
-
-function callUser(id, userName) {
-  socket.emit('call-user', { to: id, from: peer.id, userName: user });
-}
-
-socket.on('call-made', async (data) => {
-  const acceptCall = confirm(`${data.userName} is calling you. Do you want to accept?`);
-  if (acceptCall) {
-    const call = peer.call(data.socket, myVideoStream);
-    call.on('stream', (userVideoStream) => {
-      const video = document.createElement('video');
-      addVideoStream(video, userVideoStream);
-    });
-    socket.emit('make-answer', { to: data.socket, answer: true });
-  } else {
-    socket.emit('make-answer', { to: data.socket, answer: false });
-  }
-});
-
-socket.on('answer-made', (data) => {
-  if (data.answer) {
-    const call = peer.call(data.socket, myVideoStream);
-    call.on('stream', (userVideoStream) => {
-      const video = document.createElement('video');
-      addVideoStream(video, userVideoStream);
-    });
-  } else {
-    alert('Call declined');
-  }
 });
