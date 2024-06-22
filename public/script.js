@@ -39,11 +39,15 @@ navigator.mediaDevices
     addVideoStream(myVideo, stream);
 
     peer.on("call", (call) => {
-      call.answer(stream);
-      const video = document.createElement("video");
-      call.on("stream", (userVideoStream) => {
-        addVideoStream(video, userVideoStream);
-      });
+      // Show call notification
+      const acceptCall = confirm(`You are receiving a call from ${call.peer}. Do you want to accept?`);
+      if (acceptCall) {
+        call.answer(stream);
+        const video = document.createElement("video");
+        call.on("stream", (userVideoStream) => {
+          addVideoStream(video, userVideoStream);
+        });
+      }
     });
 
     socket.on("user-connected", (userId) => {
@@ -64,6 +68,10 @@ peer.on("open", (id) => {
 });
 
 const addVideoStream = (video, stream) => {
+  // Remove existing video elements if already two are present
+  if (videoGrid.children.length >= 2) {
+    videoGrid.removeChild(videoGrid.firstChild);
+  }
   video.srcObject = stream;
   video.addEventListener("loadedmetadata", () => {
     video.play();
@@ -145,24 +153,38 @@ socket.on("user-list", (users) => {
     li.innerText = user.userName;
     li.dataset.id = user.userId;
     li.addEventListener("click", () => {
-      callUser(user.userId);
+      callUser(user.userId, user.userName);
     });
     userList.appendChild(li);
   });
 });
 
-function callUser(id) {
-  const call = peer.call(id, myVideoStream);
-  call.on("stream", (userVideoStream) => {
-    const video = document.createElement("video");
-    addVideoStream(video, userVideoStream);
-  });
+function callUser(id, userName) {
+  socket.emit('call-user', { to: id, from: peer.id, userName: user });
 }
 
-peer.on("call", (call) => {
-  call.answer(myVideoStream);
-  call.on("stream", (userVideoStream) => {
-    const video = document.createElement("video");
-    addVideoStream(video, userVideoStream);
-  });
+socket.on('call-made', async (data) => {
+  const acceptCall = confirm(`${data.userName} is calling you. Do you want to accept?`);
+  if (acceptCall) {
+    const call = peer.call(data.socket, myVideoStream);
+    call.on('stream', (userVideoStream) => {
+      const video = document.createElement('video');
+      addVideoStream(video, userVideoStream);
+    });
+    socket.emit('make-answer', { to: data.socket, answer: true });
+  } else {
+    socket.emit('make-answer', { to: data.socket, answer: false });
+  }
+});
+
+socket.on('answer-made', (data) => {
+  if (data.answer) {
+    const call = peer.call(data.socket, myVideoStream);
+    call.on('stream', (userVideoStream) => {
+      const video = document.createElement('video');
+      addVideoStream(video, userVideoStream);
+    });
+  } else {
+    alert('Call declined');
+  }
 });
