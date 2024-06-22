@@ -16,6 +16,8 @@ const opinions = {
 app.use("/peerjs", ExpressPeerServer(server, opinions));
 app.use(express.static("public"));
 
+let users = {}; // To store online users
+
 app.get("/", (req, res) => {
   res.redirect(`/${uuidv4()}`);
 });
@@ -26,10 +28,31 @@ app.get("/:room", (req, res) => {
 
 io.on("connection", (socket) => {
   socket.on("join-room", (roomId, userId, userName) => {
+    users[socket.id] = { userId, userName };
     socket.join(roomId);
-    setTimeout(()=>{
-      socket.to(roomId).broadcast.emit("user-connected", userId);
-    }, 1000)
+
+    io.to(roomId).emit("user-list", Object.values(users));
+
+    socket.on("disconnect", () => {
+      delete users[socket.id];
+      io.to(roomId).emit("user-list", Object.values(users));
+    });
+
+    socket.on("call-user", (data) => {
+      io.to(data.to).emit("call-made", {
+        offer: data.offer,
+        socket: socket.id,
+        userName: data.userName
+      });
+    });
+
+    socket.on("make-answer", (data) => {
+      io.to(data.to).emit("answer-made", {
+        socket: socket.id,
+        answer: data.answer
+      });
+    });
+
     socket.on("message", (message) => {
       io.to(roomId).emit("createMessage", message, userName);
     });

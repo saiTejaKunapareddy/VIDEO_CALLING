@@ -3,6 +3,7 @@ const videoGrid = document.getElementById("video-grid");
 const myVideo = document.createElement("video");
 const showChat = document.querySelector("#showChat");
 const backBtn = document.querySelector(".header__back");
+const userList = document.getElementById("users");
 myVideo.muted = true;
 
 backBtn.addEventListener("click", () => {
@@ -38,7 +39,6 @@ navigator.mediaDevices
     addVideoStream(myVideo, stream);
 
     peer.on("call", (call) => {
-      console.log('someone call me');
       call.answer(stream);
       const video = document.createElement("video");
       call.on("stream", (userVideoStream) => {
@@ -52,7 +52,6 @@ navigator.mediaDevices
   });
 
 const connectToNewUser = (userId, stream) => {
-  console.log('I call someone' + userId);
   const call = peer.call(userId, stream);
   const video = document.createElement("video");
   call.on("stream", (userVideoStream) => {
@@ -61,7 +60,6 @@ const connectToNewUser = (userId, stream) => {
 };
 
 peer.on("open", (id) => {
-  console.log('my id is' + id);
   socket.emit("join-room", ROOM_ID, id, user);
 });
 
@@ -132,11 +130,40 @@ inviteButton.addEventListener("click", (e) => {
 });
 
 socket.on("createMessage", (message, userName) => {
-  messages.innerHTML =
-    messages.innerHTML +
+  messages.innerHTML +=
     `<div class="message">
         <b><i class="far fa-user-circle"></i> <span> ${userName === user ? "me" : userName
     }</span> </b>
         <span>${message}</span>
     </div>`;
 });
+
+socket.on("user-list", (users) => {
+  userList.innerHTML = "";
+  users.forEach((user) => {
+    const li = document.createElement("li");
+    li.innerText = user.userName;
+    li.dataset.id = user.userId;
+    li.addEventListener("click", () => {
+      callUser(user.userId);
+    });
+    userList.appendChild(li);
+  });
+});
+
+function callUser(id) {
+  peer.on("call", (call) => {
+    call.answer(myVideoStream);
+    call.on("stream", (userVideoStream) => {
+      addVideoStream(myVideo, userVideoStream);
+    });
+  });
+
+  peer.on("connection", (conn) => {
+    conn.on("data", (data) => {
+      if (data.type === "call") {
+        callUser(data.from);
+      }
+    });
+  });
+}
